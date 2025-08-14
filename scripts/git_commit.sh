@@ -17,8 +17,21 @@ fi
 
 echo "Generating commit message..."
 
-# Call Claude with your configured MCP server
-commit_msg=$(claude --print "Use the commit_message tool to generate a commit message based on the current git diff")
+# Run the claude command to generate a commit message
+raw_response=$(cd "$PROJECT_ROOT" && claude --permission-mode bypassPermissions "Use the commit_message tool to generate a commit message based on the current git diff")
+
+# Clean the response - extract only the commit message
+# Look for lines starting with commit types and take everything from there
+commit_msg=$(echo "$raw_response" | awk '
+    /^(feat|fix|docs|style|refactor|test|chore):/ { found=1 }
+    found && /^(Generated with|Co-Authored-By|🤖)/ { exit }
+    found { print }
+' | sed '/^```/d' | sed 's/^[[:space:]]*•/•/')
+
+# If cleaning failed, fallback to raw response
+if [ -z "$commit_msg" ]; then
+    commit_msg="$raw_response"
+fi
 
 echo "Proposed commit message:"
 echo "------------------------"

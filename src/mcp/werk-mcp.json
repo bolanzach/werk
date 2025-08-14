@@ -1,0 +1,9 @@
+{
+  "werk-mcp": {
+    "command": "deno",
+    "args": [
+      "task",
+      "run-mcp"
+    ]
+  }
+}

@@ -10,6 +10,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "npm:@modelcontextprotocol/sdk/types.js";
+import {diffCommitTool} from "./tools/commit.ts";
 
 
 // Initialize the server
@@ -48,57 +49,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   switch (name) {
     case "commit_message": {
-      // Get the current git branch
-      const branchCommand = new Deno.Command("git", {
-        args: ["branch", "--show-current"],
-        stdout: "piped",
-        stderr: "piped",
-      });
-      
-      const branchOutput = await branchCommand.output();
-      const branch = new TextDecoder().decode(branchOutput.stdout).trim();
-      
-      // Get the current git diff
-      const diffCommand = new Deno.Command("git", {
-        args: ["diff", "--staged"],
-        stdout: "piped",
-        stderr: "piped",
-      });
-
-      const { stdout, stderr } = await diffCommand.output();
-      const diff = new TextDecoder().decode(stdout);
-      const error = new TextDecoder().decode(stderr);
-
-      if (error) {
+      try {
+        const [branch, diff] = await diffCommitTool();
         return {
           content: [
             {
               type: "text",
-              text: `Error getting git diff: ${error}`,
+              text: `Current branch: ${branch}\n\nHere is the current git diff:\n\n${diff}\n\n---\n\nGenerate a git commit message following this EXACT format:\n\n<type>: <subject>\n\n- <bullet point 1>\n- <bullet point 2>\n- <bullet point 3>\n\nRULES:\n1. Type must be one of: feat, fix, docs, style, refactor, test, chore\n2. Subject line should be max 50 characters\n3. Include 3-5 bullet points describing the main changes\n4. DO NOT include any explanatory text before or after the commit message\n5. DO NOT include "Generated with", "Co-Authored-By", or any AI-related metadata\n6. DO NOT use markdown code blocks or backticks\n7. DO NOT add any introductory phrases like "Based on the changes" or "Here's the commit message"\n8. ONLY output the commit message text itself, nothing else\n\nYour response should start directly with the type (feat/fix/etc) and end with the last bullet point.`,
             },
           ],
         };
-      }
-
-      if (!diff) {
+      } catch (err) {
         return {
           content: [
             {
               type: "text",
-              text: "No staged changes found. Please stage your changes with 'git add' first.",
+              text: `Error: ${err.message ?? "An unknown error occurred"}`,
             },
           ],
-        };
+        }
       }
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Current branch: ${branch}\n\nHere is the current git diff:\n\n${diff}\n\n---\n\nGenerate a git commit message following this EXACT format:\n\n<type>: <subject>\n\n- <bullet point 1>\n- <bullet point 2>\n- <bullet point 3>\n\nRULES:\n1. Type must be one of: feat, fix, docs, style, refactor, test, chore\n2. Subject line should be max 50 characters\n3. Include 3-5 bullet points describing the main changes\n4. DO NOT include any explanatory text before or after the commit message\n5. DO NOT include "Generated with", "Co-Authored-By", or any AI-related metadata\n6. DO NOT use markdown code blocks or backticks\n7. DO NOT add any introductory phrases like "Based on the changes" or "Here's the commit message"\n8. ONLY output the commit message text itself, nothing else\n\nYour response should start directly with the type (feat/fix/etc) and end with the last bullet point.`,
-          },
-        ],
-      };
     }
     default:
       throw new Error(`Unknown tool: ${name}`);

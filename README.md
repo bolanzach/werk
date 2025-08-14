@@ -36,5 +36,5 @@ Configure your MCP Client to connect to the server.
 
 **Claude Code**
 ```shell
-claude mcp add werk-mcp deno task run-mcp /path/to/werk/src/mcp.ts
+claude mcp add werk-mcp deno task run-mcp /path/to/werk/src/mcp/server.ts
 ```
