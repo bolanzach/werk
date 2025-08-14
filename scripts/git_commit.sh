@@ -1,5 +1,5 @@
 #!/bin/bash
-# zcommit script
+# Useful to setup a bash alias for this script: gcommit='bash path/to/werk/scripts/git_commit.sh'
 
 set -e
 
@@ -15,7 +15,7 @@ if git diff --cached --quiet; then
     exit 1
 fi
 
-echo "Generating commit message..."
+echo "Generating commit message 🤖 ..."
 
 # Run the claude command to generate a commit message
 raw_response=$(cd "$PROJECT_ROOT" && claude --permission-mode bypassPermissions "Use the commit_message tool to generate a commit message based on the current git diff")
@@ -28,9 +28,10 @@ commit_msg=$(echo "$raw_response" | awk '
     found { print }
 ' | sed '/^```/d' | sed 's/^[[:space:]]*•/•/')
 
-# If cleaning failed, fallback to raw response
+# Check if cleaning failed
 if [ -z "$commit_msg" ]; then
-    commit_msg="$raw_response"
+    echo "Error: Failed to generate a valid commit message"
+    exit 1
 fi
 
 echo "Proposed commit message:"
@@ -43,7 +44,7 @@ read -p "Proceed with this commit? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     git commit -m "$commit_msg"
-    echo "Commit successful!"
+    echo "Commit successful! 🎉"
 else
     echo "Commit cancelled"
 fi
